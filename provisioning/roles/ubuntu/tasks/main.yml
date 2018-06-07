@@ -1,0 +1,16 @@
+---
+- name: Install libraries using package manager
+  package: name={{ item }} state=present
+  become: yes
+  become_method: sudo
+  with_items:
+    - curl
+    - git
+    - htop
+    - nmap
+    - python3
+    - vim
+    - tmux
+    - wget
+    - tree
+  tags: package

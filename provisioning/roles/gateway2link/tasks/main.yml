@@ -1,0 +1,56 @@
+---
+- name: Add kernel modules
+  modprobe: name={{item}} state=present
+  become: yes
+  become_method: sudo
+  with_items:
+       - ip_conntrack
+       - ip_conntrack_ftp
+       - iptable_nat
+       - ip_nat_ftp
+       - ip_conntrack_sip
+       - ip_nat_sip
+- lineinfile: dest=/etc/iproute2/rt_tables line="10 ISP1"
+- lineinfile: dest=/etc/iproute2/rt_tables line="20 ISP2"
+
+- name: Use Jinja2 template to create interface config file
+  template:
+    src: "ifcfg.jinja2"
+    dest: "/etc/network/interfaces.d/ifcfg-{{ item.device }}"
+  with_items:
+    - device: enp0s9
+      bootproto: static
+      address: 192.168.0.252
+      netmask: 255.255.255.0
+      subnet: 192.168.0.0/24
+      iface_gw: 192.168.0.1
+      isps:
+        - ISP1
+        - ISP2
+    - device: enp0s10
+      bootproto: static
+      address: 192.168.0.251
+      netmask: 255.255.255.0
+      subnet: 192.168.0.0/24
+      iface_gw: 192.168.0.1
+      isps:
+        - ISP2
+        - ISP1
+    - device: enp0s8
+      bootproto: static
+      address: 192.168.13.13
+      netmask: 255.255.255.0
+
+- iptables_raw:
+    name: distribute packets to each route tables
+    rules: |
+      -t mangle -A PREROUTING -j CONNMARK --restore-mark
+      -t mangle -A PREROUTING -m mark ! --mark 0 -j ACCEPT
+      -t mangle -A PREROUTING -j MARK --set-mark 10
+      -t mangle -A PREROUTING -m statistic --mode random --probability 0.5 -j MARK --set-mark 20
+      -t mangle -A PREROUTING -j CONNMARK --save-mark
+- iptables_raw:
+    name: NAT rules
+    rules: |
+      -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+      -t nat -A POSTROUTING -o eth2 -j MASQUERADE
