@@ -52,5 +52,5 @@
 - iptables_raw:
     name: NAT rules
     rules: |
-      -t nat -A POSTROUTING -o eth1 -j MASQUERADE
-      -t nat -A POSTROUTING -o eth2 -j MASQUERADE
+      -t nat -A POSTROUTING -o enp0s9 -j MASQUERADE
+      -t nat -A POSTROUTING -o enp0s10 -j MASQUERADE
